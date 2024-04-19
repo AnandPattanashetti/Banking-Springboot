@@ -1,16 +1,28 @@
-- name : Configure Docker on EC2 Instances
-  hosts : all
-  become: true
-  connection : ssh
-  tasks : 
-  - name: updating apt
-    command : sudo apt-get update
+- name: docker build and push
+  hosts: local
+  become: yes
+  connection: ssh
+  tasks:
+    - name: update apt package cache
+      apt:
+        update_cache: yes
 
-  - name : Install Docker
-    command : sudo apt-get install -y docker.io
+    - name: Build Docker Image
+      command: docker build -t Bank-application .
+      args:
+        chdir: /var/lib/jenkins/workspace/Bank-application
 
-  - name : Start Docker Service
-    command : sudo systemctl start docker
+    - name: log in into Docker Hubs
+      community.docker.docker_login:
+        registry_url: https://index.docker.io/v1/
+        username: anand010
+       password: dckr_pat_1bkVc1v1ydKS9LXC_cMw4834huY
 
-  - name: Deploy Docker Container
-    command: docker run -itd -p 8084:8081 shubhamkushwah123/finance-me:1.0
+    - name: tag image
+      command: docker tag Bank-application:latest anand010/Bank-application:latest
+
+    - name: push image
+      command: docker push anand010/Bank-application:latest
+
+    - name: Run Container
+      command: docker run -d --name BankApp -p 8081:8080 anand010/Bank-application:latest
